@@ -1,0 +1,29 @@
+---
+# File to send src files to pi
+# you need to copy your ssh keys to the pi in order for this to work
+# ansible-playbook -i inventories/hosts -u pi deploy.yml
+- hosts: pis
+  become: yes
+  gather_facts: false
+
+  tasks:
+    - name: Copy server src files to pi
+      copy:
+        src: ../src
+        dest: /home/pi
+        owner: pi
+        group: pi
+        mode: '0770'
+
+    - name: Set permissions on /src child items
+      become: yes
+      file:
+        path: /home/pi/src
+        recurse: yes
+        owner: pi
+        group: pi
+        mode: '0770'
+
+  post_tasks:
+    - name: reboot PIs
+      reboot:

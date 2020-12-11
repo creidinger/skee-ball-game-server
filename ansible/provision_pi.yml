@@ -1,0 +1,99 @@
+---
+# File to config rasberry pis
+# you need to copy your ssh keys to the pi in order for this to work
+# ansible-playbook -i inventories/hosts -u pi provision_pi.yml
+- hosts: pis
+  become: yes
+  gather_facts: true
+  vars:
+    shared_folder_path: /ferring
+
+  roles:
+    # - role: creidinger.common
+    - role: geerlingguy.samba
+    - role: samba_config
+
+  # Some config borrowed from here:
+  # https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuitpython-on-raspberry-pi
+  tasks:
+    - name: Disable GUI and enable CLI auto-login
+      become: yes
+      command: raspi-config nonint do_boot_behaviour B2
+
+    - name: pip install RPI.GPIO
+      become: yes
+      command: pip3 install RPI.GPIO
+
+    - name: copy .bash_profile to ~/
+      copy:
+        src: .bash_profile
+        dest: /home/pi/
+
+    - name: copy .banner to ~/
+      copy:
+        src: .banner
+        dest: /home/pi/
+
+    #
+    # server source config
+    #
+    # https://linuxconfig.org/how-to-create-systemd-service-unit-in-linux
+    # https://www.raspberrypi.org/documentation/linux/usage/systemd.md
+    # commands
+    # sudo systemctl start myscript.service
+    # sudo systemctl stop myscript.service
+    - name: Copy gameserver.service file to /etc/systemd/system
+      template:
+        src: gameserver.service.j2
+        dest: /etc/systemd/system/gameserver.service
+        mode: '0770'
+
+    # Used to allow autostart of service on pi
+    # No you no longer have to run this command.
+    # sudo systemctl enable myscript.service
+    - name: Allow gameserver.service autostart by createing a symbolic link
+      file:
+        src: /etc/systemd/system/gameserver.service
+        dest: /etc/systemd/system/multi-user.target.wants/gameserver.service
+        owner: root
+        group: root
+        state: link
+
+    - name: Copy logmonitor.service file to /etc/systemd/system
+      template:
+        src: logmonitor.service.j2
+        dest: /etc/systemd/system/logmonitor.service
+        mode: '0770'
+
+    # Used to allow autostart of service on pi
+    # No you no longer have to run this command.
+    # sudo systemctl enable myscript.service
+    - name: Allow logmonitor.service autostart by createing a symbolic link
+      file:
+        src: /etc/systemd/system/logmonitor.service
+        dest: /etc/systemd/system/multi-user.target.wants/logmonitor.service
+        owner: root
+        group: root
+        state: link
+
+    - name: Copy server src files to pi
+      copy:
+        src: ../src
+        dest: /home/pi
+        owner: pi
+        group: pi
+        mode: '0770'
+
+    - name: Set permissions on /src child items
+      become: yes
+      file:
+        path: /home/pi/src
+        recurse: yes
+        owner: pi
+        group: pi
+        mode: '0770'
+        recurse: yes
+
+  post_tasks:
+    - name: reboot PIs
+      reboot:

@@ -1,0 +1,14 @@
+---
+- name: Deploy smb.conf
+  template:
+    src: "smb.conf.j2"
+    dest: /etc/samba/smb.conf
+
+- name: Include OS-specific variables.
+  include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Create shared folder "{{ shared_folder_path }}"
+  file:
+    path: "{{ shared_folder_path }}"
+    state: directory
+    mode: '1777'

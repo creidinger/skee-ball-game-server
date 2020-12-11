@@ -1,0 +1,47 @@
+[Unit]
+# https://linuxconfig.org/how-to-create-systemd-service-unit-in-linux
+# https://www.raspberrypi.org/documentation/linux/usage/systemd.md
+#
+# sudo systemctl start myscript.service
+# sudo systemctl stop myscript.service
+# autostart
+# sudo systemctl enable myscript.service
+#
+Description=server_log_monitor
+Documentation=https://git.ogilvychww.com/ferring/ferring-idweek-server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+PermissionsStartOnly=true
+
+ExecStart=/usr/bin/python3 monitor.py
+WorkingDirectory=/home/pi/src/server_log_monitor
+
+
+# restart settings
+StartLimitBurst=5
+# Disabled because raspian doesn't recognise command...
+# This is normally used to stop a start/loop/timeout problem
+# StartLimitIntercvalSec=10
+RestartSec=3
+Restart=always
+
+StandardOutput=journal
+StandardError=inherit
+
+# Specifies the maximum file descriptor number that can be opened by this process
+LimitNOFILE=65536
+
+# Disable timeout logic and wait until process is stopped
+TimeoutStopSec=0
+
+# SIGTERM signal is used to stop Minio
+KillSignal=SIGTERM
+
+SendSIGKILL=no
+
+SuccessExitStatus=0
+
+[Install]
+WantedBy=multi-user.target
